@@ -1,0 +1,604 @@
+///////////////////////////////////////////////////////////////////////
+
+
+CLPS2C (Custom Language for PlayStation 2 Cheats)
+Version: 0.1
+GitHub: https://github.com/NiV-L-A/CLPS2C
+
+
+///////////////////////////////////////////////////////////////////////
+
+
+Table Of Contents:
+(1) Changelog
+(2) Description and Settings
+(3) List of commands
+(4) Example code
+(5) Credits
+
+
+///////////////////////////////////////////////////////////////////////
+
+_/|\-/|\-/|\_
+(1) Changelog
+_/|\-/|\-/|\_
+
+Version 0.1 (Date)
+	- Initial Version
+	
+///////////////////////////////////////////////////////////////////////
+
+_/|\-/|\-/|\-/|\-/|\-/|\-/|\-/|\-/|\_
+(2) Description and Settings
+_/|\-/|\-/|\-/|\-/|\-/|\-/|\-/|\-/|\_
+
+CLPS2C is a domain-specific language, built specifically
+for writing PS2 cheat codes.
+This project was born because I wanted a way to write PS2 cheat codes
+in an easier manner by using an imperative language.
+Below is a list of commands you can use, in which () are the arguments
+and [] are optional arguments.
+Press the F5 key or the CLPS2C text to "Sync" (parse the commands).
+
+- All (ADDRESS) values must be a correct hexadecimal number,
+  consisting of up to 8 digits, with or without the prefix "0x".
+- All (VALUE) values are always considered decimal,
+  adding the prefix "0x" will make them hexadecimal
+  and placing the (VALUE) between quotes (") will make them a string.
+- All (ADDRESS) and (VALUE) values can be replaced with variables
+  previously declared by using the "Set" command.
+- Indentation does not matter.
+- Support for single-line ("//") and multi-line ("/*" "*/") comments.
+- Support for escape characters in strings:
+  \0	Appends 0x00 to the value (useful for terminating a string).
+  \n	New line.
+  \t	Tab.
+- Auto-indentation is enabled by default. It can be disabled in Settings->Auto-indentation
+- The app can translate the RAW codes in the output window to PCSX2-Format codes. Enable it in Settings->PCSX2-Format output
+- CTRL-Z to undo, CTRL-Y to redo.
+- Hold ALT and left click to go in rectangular selection mode.
+
+Syntax that is case-sensetive:
+- Variable names ("Set myVar 1" is different than "Set MYVAR 1").
+- The escape characters ("\n" is different than "\N").
+
+Syntax that is not case-sensetive:
+- Commands (SET is equivalent to set).
+
+///////////////////////////////////////////////////////////////////////
+
+_/|\-/|\-/|\-/|\-/|\_
+(3) List of commands
+_/|\-/|\-/|\-/|\-/|\_
+
+Unique
+  Set (NAME) (VALUE)
+  SetEncoding|SE (ENCODING)
+  SendRaw|SR (VALUE)
+Write
+  Write8|W8 (ADDRESS) (VALUE)
+  Write16|W16 (ADDRESS) (VALUE)
+  Write32|W32 (ADDRESS) (VALUE)
+  WriteFloat|WF (ADDRESS) (VALUE)
+  WriteString|WS (ADDRESS) (VALUE)
+  WriteBytes|WB (ADDRESS) (VALUE)
+  WritePointer8|WP8 (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+  WritePointer16|WP16 (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+  WritePointer32|WP32 (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+  WritePointerFloat|WPF (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+  CopyBytes|CB (ADDRESS) (ADDRESS) (VALUE)
+Increment / Decrement
+  Increment8|I8 (ADDRESS) (VALUE)
+  Increment16|I16 (ADDRESS) (VALUE)
+  Increment32|I32 (ADDRESS) (VALUE)
+  Decrement8|D8 (ADDRESS) (VALUE)
+  Decrement16|D16 (ADDRESS) (VALUE)
+  Decrement32|D32 (ADDRESS) (VALUE)
+Boolean Operations
+  OR8 (ADDRESS) (VALUE)
+  OR16 (ADDRESS) (VALUE)
+  AND8 (ADDRESS) (VALUE)
+  AND16 (ADDRESS) (VALUE)
+  XOR8 (ADDRESS) (VALUE)
+  XOR16 (ADDRESS) (VALUE)
+Conditional
+  If (ADDRESS) (COND)(DATATYPE) (VALUE)
+  EndIf|EI
+
+///////////////////////////////////////////////////////////////////////
+
+Set (NAME) (VALUE)
+	Declares a variable with the name (NAME) and
+	assigns the value (VALUE) to it.
+	Once a variable is declared, declaring it once again
+	will only replace its value.
+	NOTE: This instruction does NOT get translated to a cheat code.
+	
+	Arguments:
+		NAME	Name of the variable
+		VALUE	Value assigned to the variable
+	
+	Usage:
+		Set MapID 0x4AF8A4
+		Set TEMP 0x3A8B78
+		Set myVar 1000				// Equivalent to "Set myVar 0x3E8"
+		Set CharacterName "muse"	// Will be converted to the array of bytes 6D 75 73 65
+		Set ProfileName "muse\0"	// Will be converted to the array of bytes 6D 75 73 65 00
+
+		Set CharacterHP 0x12345678	// Now CharacterHP has the value of 0x12345678
+		Set CharacterHP 0xDEADBEEF	// Now CharacterHP has the value of 0xDEADBEEF
+		
+///////////////////////////////////////////////////////////////////////
+
+SetEncoding|SE (ENCODING)
+	Sets the current encoding (ENCODING) to be used for the WriteString command.
+	The encoding chosen will be used until another SetEncoding is encountered.
+	NOTE: This instruction does NOT get translated to a cheat code.
+	
+	(ENCODING):
+		UTF-8 (default)
+		UTF-16	
+	
+	Usage:
+		SetEncoding UTF-8
+		WriteString 20E98100 "park"
+		
+		SetEncoding UTF-16
+		WriteString 20E98100 "park"
+
+///////////////////////////////////////////////////////////////////////
+
+SendRaw|SR (VALUE)
+	Writes a raw string (VALUE).
+	Condition for (VALUE): Prefix and suffix always " when not using a declared variable.
+	
+	Usage:
+		SendRaw "//Is there a better way to do this?"
+		SendRaw "park\n"
+		
+		Set myStr "//All her doubts were someone else's point of view"
+		SendRaw myStr
+
+///////////////////////////////////////////////////////////////////////
+
+Write8|W8 (ADDRESS) (VALUE)
+	Writes an 8-bit (1 byte) value (VALUE) to the address (ADDRESS).
+	Condition for (VALUE): 0x00 <= (VALUE) <= 0xFF
+	
+	Usage:
+		Write8 21F2E740 40			// Writes 40 to the memory address 0x21F2E740
+		Write8 21F2E740 0x40		// Writes 64 to the memory address 0x21F2E740
+		
+		Set MapID 0x004AF8A4
+		Write8 MapID 6				// Writes 6 to the memory address 0x004AF8A4
+		
+		Set MapID 0x004AF8A4
+		Set TargetValue 127
+		Write8 MapID TargetValue	// Writes 127 to the memory address 0x004AF8A4
+
+///////////////////////////////////////////////////////////////////////
+
+Write16|W16 (ADDRESS) (VALUE)
+	Writes a 16-bit (2 bytes) value (VALUE) to the address (ADDRESS).
+	Condition for (VALUE): 0x0000 <= (VALUE) <= 0xFFFF
+	
+	Usage:
+		Write16 21F2E740 123		// Writes 40 to the memory address 0x01F2E740
+		Write16 21F2E740 0x123		// Writes 291 to the memory address 0x01F2E740
+		
+		Set CharacterID 0x20390018
+		Write16 CharacterID 0xDEAD	// Writes 57005 to the memory address 0x00390018
+		
+		Set MapID 0x004AF8A4
+		Set TargetValue 29827
+		Write16 MapID TargetValue	// Writes 29827 to the memory address 0x004AF8A4
+
+///////////////////////////////////////////////////////////////////////
+
+Write32|W32 (ADDRESS) (VALUE)
+	Writes a 32-bit (4 bytes) value (VALUE) to the address (ADDRESS).
+	Condition for (VALUE): 0x00000000 <= (VALUE) <= 0xFFFFFFFF
+	
+	Usage:
+		Write32 21F2E740 123			// Writes 40 to the memory address 0x01F2E740
+		Write32 21F2E740 0x123			// Writes 291 to the memory address 0x01F2E740
+		
+		Set CharacterID 0x20390018
+		Write32 CharacterID 0xDEADDEAD	// Writes 3735936685 to the memory address 0x00390018
+		
+		Set MapID 0x004AF8A4
+		Set TargetValue 0x12341234
+		Write32 MapID TargetValue		// Writes 305402420 to the memory address 0x004AF8A4
+
+///////////////////////////////////////////////////////////////////////
+
+WriteFloat|WF (ADDRESS) (VALUE)
+	Writes a 32-bit floating-point value (VALUE) to the address (ADDRESS).
+	Condition for (VALUE): Must be decimal.
+	
+	Usage:
+		WriteFloat 21F2E740 123			// Writes 123 in float to the memory address 0x01F2E740. Equivalent to "Write32 01F2E740 0x42F60000"
+		
+		Set XCoord 0x20390018
+		WriteFloat XCoord -5000			// Writes -5000 in float to the memory address 0x00390018. Equivalent to "Write32 00390018 0xC59C4000"
+
+		Set XCoord 0x20390018
+		Set TargetValue 1.5
+		WriteFloat XCoord TargetValue	// Writes 1.5 in float to the memory address 0x00390018. Equivalent to "Write32 00390018 0x3FC00000"
+
+		WriteFloat 20390018 Infinity	// Writes +Infinity in float to the memory address 0x00390018. Equivalent to "Write32 00390018 0x7F800000"
+		WriteFloat 20390018 -Infinity	// Writes -Infinity in float to the memory address 0x00390018. Equivalent to "Write32 00390018 0xFF800000"
+		WriteFloat 20390018 NaN			// Writes NaN in float to the memory address 0x00390018. Equivalent to "Write32 00390018 0xFFC00000"
+
+///////////////////////////////////////////////////////////////////////
+
+WriteString|WS (ADDRESS) (VALUE)
+	Writes a string (VALUE) to the address (ADDRESS) with the current encoding.
+	Condition for (VALUE): Prefix and suffix always " when not using a declared variable.
+	NOTE: Append "\0" at the end of the string to add a null terminator character.
+	NOTE: When ((VALUE).Length % 4 != 0), more writes of different data types are needed:
+	  "park"	->	Write32.
+	  "parko"	->	Write32+Write8.
+	  "parkou"	->	Write32+Write16.
+	  "parkour"	->	Write32+Write16+Write8.
+
+	Usage:
+		WriteString 01F2E740 "parkour_start"	// Writes "parkour_start" in string form to the memory address 0x01F2E740
+		WriteString 01F2E740 "parkour_start\0"	// Writes "parkour_start" in string form to the memory address 0x01F2E740 and appends a 0x00 at the end.
+		
+		Set myAddr 0x01F2E740
+		Set TargetValue "Thanks for playing this map!\n\nPress any key to exit.\0"
+		WriteString myAddr TargetValue			// Writes "Thanks for playing this map!\n\nPress any key to exit.\0", to the memory address 0x01F2E740
+
+///////////////////////////////////////////////////////////////////////
+
+WriteBytes|WB (ADDRESS) (VALUE)
+	Writes a byte array (VALUE) to the address (ADDRESS).
+	Condition for (VALUE): Prefix and suffix always " when not using a declared variable. "AA BB CC DD" format.
+	NOTE: When ((VALUE).Length % 4 != 0), more writes of different data types are needed:
+	  "00 11 22 33"				->	Write32.
+	  "00 11 22 33 44"			->	Write32+Write8.
+	  "00 11 22 33 44 55"		->	Write32+Write16.
+	  "00 11 22 33 44 55 66"	->	Write32+Write16+Write8.
+	Usage:
+		WriteBytes 00764590 "00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF"
+
+		Set myAddr 0x01F2E740
+		Set TargetValue "e4 7b bc 08 17 f5 7f a4 d2 2a 06 e8 74 82 29 d4 7e 0f 7d 86 c6 41 e4 a1 85 00"
+		WriteBytes myAddr TargetValue
+
+///////////////////////////////////////////////////////////////////////
+
+WritePointer8|WP8 (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+	Writes an 8-bit (1 byte) value (VALUE) to the address calculated by
+	loading the base (ADDRESS) and adding (OFFSET) and [OFFSET].
+	Each offset must be separated by a comma (,).
+	Condition for (VALUE): 0x00 <= (VALUE) <= 0xFF
+	
+	Usage:
+		WritePointer8 21F2E740,48 40			// Writes 40 to the memory address pointed by (the base from address 0x21F2E740 and adding the offset 0x48)
+		WritePointer8 21F2E740,0x1C,0x70 0x40		// Writes 64 to the memory address poined by (the base from address 0x21F2E740 and adding the offsets 0x1C and 0x70)
+		
+		Set CharBase 0x004AF8A4
+		Set StatsOff 0x20
+		Set HPOff 0x30
+		WritePointer8 CharBase,StatsOff,HPOff 1
+		
+///////////////////////////////////////////////////////////////////////
+
+WritePointer16|WP16 (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+	Writes a 16-bit (2 bytes) value (VALUE) to the address calculated by
+	loading the base (ADDRESS) and adding (OFFSET) and [OFFSET].
+	Each offset must be separated by a comma (,).
+	Condition for (VALUE): 0x0000 <= (VALUE) <= 0xFFFF
+	
+	Usage:
+		WritePointer16 21F2E740,48 40			// Writes 40 to the memory address pointed by (the base from address 0x21F2E740 and adding the offset 0x48)
+		WritePointer16 21F2E740,0x1C,0x70 0x40		// Writes 64 to the memory address poined by (the base from address 0x21F2E740 and adding the offsets 0x1C and 0x70)
+		
+		Set CharBase 0x004AF8A4
+		Set StatsOff 0x20
+		Set HPOff 0x30
+		WritePointer16 CharBase,StatsOff,HPOff 1
+
+///////////////////////////////////////////////////////////////////////
+
+WritePointer32|WP32 (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+	Writes a 32-bit (4 bytes) value (VALUE) to the address calculated by
+	loading the base (ADDRESS) and adding (OFFSET) and [OFFSET].
+	Each offset must be separated by a comma (,).
+	Condition for (VALUE): 0x00000000 <= (VALUE) <= 0xFFFFFFFF
+	
+	Usage:
+		WritePointer32 21F2E740,48 40			// Writes 40 to the memory address pointed by (the base from address 0x21F2E740 and adding the offset 0x48)
+		WritePointer32 21F2E740,0x1C,0x70 0x40		// Writes 64 to the memory address poined by (the base from address 0x21F2E740 and adding the offsets 0x1C and 0x70)
+		
+		Set CharBase 0x004AF8A4
+		Set StatsOff 0x20
+		Set HPOff 0x30
+		WritePointer32 CharBase,StatsOff,HPOff 1
+
+///////////////////////////////////////////////////////////////////////
+
+WritePointerFloat|WPF (ADDRESS)(OFFSET)[OFFSET] (VALUE)
+	Writes a 32-bit floating-point value (VALUE) to the address calculated by
+	loading the base (ADDRESS) and adding (OFFSET) and [OFFSET].
+	Each offset must be separated by a comma (,).
+	Condition for (VALUE): Must be decimal.
+	
+	Usage:
+		WritePointerFloat 21F2E740,48 1.5			// Writes 1.5 to the memory address pointed by (the base from address 0x21F2E740 and adding the offset 0x48)
+		WritePointerFloat 21F2E740,0x1C,0x70 100		// Writes 100 to the memory address poined by (the base from address 0x21F2E740 and adding the offsets 0x1C and 0x70)
+		
+		Set CharBase 0x004AF8A4
+		Set TransOff 0x58
+		Set XCoord 0x30
+		WritePointerFloat CharBase,TransOff,XCoord Infinity
+
+///////////////////////////////////////////////////////////////////////
+
+CopyBytes|CB (ADDRESS) (ADDRESS) (VALUE)
+	Copies a block of (VALUE) bytes from source address (ADDRESS) to destination address (ADDRESS).
+	
+	Arguments:
+	  ADDRESS	Source address
+      ADDRESS	Destination address
+      VALUE		Length
+
+	Usage:
+		CopyBytes 15E6CB4 15E6CB8 4	// Copies 4 bytes from 0x015E6CB4 to 0x015E6CB8
+		
+		Set source 0x004AF8A4
+		Set dest 0x01F2E740
+		CopyBytes source dest 0x40	// Copies 64 bytes from 0x004AF8A4 to 0x01F2E740
+		
+///////////////////////////////////////////////////////////////////////
+
+Increment8|I8 (ADDRESS) (VALUE)
+	Increments the 8-bit value at address (ADDRESS) by the 8-bit value (VALUE).
+
+	Usage:
+		Increment8 20E98100 1	// Increments the value at address 0xE98100 by 1
+		
+		Set Addr 0xA73910
+		Set Val 100
+		Increment8 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+Increment16|I16 (ADDRESS) (VALUE)
+	Increments the 16-bit value at address (ADDRESS) by the 16-bit value (VALUE).
+
+	Usage:
+		Increment16 20E98100 1	// Increments the value at address 0xE98100 by 1
+		
+		Set Addr 0xA73910
+		Set Val 100
+		Increment16 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+Increment32|I32 (ADDRESS) (VALUE)
+	Increments the 32-bit value at address (ADDRESS) by the 32-bit value (VALUE).
+
+	Usage:
+		Increment32 20E98100 1	// Increments the value at address 0xE98100 by 1
+		
+		Set Addr 0xA73910
+		Set Val 100
+		Increment32 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+Decrement8|D8 (ADDRESS) (VALUE)
+	Decrements the 8-bit value at address (ADDRESS) by the 8-bit value (VALUE).
+
+	Usage:
+		Decrement8 20E98100 1	// Decrements the value at address 0xE98100 by 1
+		
+		Set Addr 0xA73910
+		Set Val 100
+		Decrement8 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+Decrement16|D16 (ADDRESS) (VALUE)
+	Decrements the 16-bit value at address (ADDRESS) by the 16-bit value (VALUE).
+
+	Usage:
+		Decrement16 20E98100 1	// Decrements the value at address 0xE98100 by 1
+		
+		Set Addr 0xA73910
+		Set Val 100
+		Decrement16 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+Decrement32|D32 (ADDRESS) (VALUE)
+	Decrements the 32-bit value at address (ADDRESS) by the 32-bit value (VALUE).
+
+	Usage:
+		Decrement32 20E98100 1	// Decrements the value at address 0xE98100 by 1
+		
+		Set Addr 0xA73910
+		Set Val 100
+		Decrement32 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+OR8 (ADDRESS) (VALUE)
+	Bitwise 8-bit OR operation between value stored at address (ADDRESS) and (VALUE). Store the result in (ADDRESS).
+
+	Usage:
+		OR8 90A64C 4
+		
+		Set Addr 90A64C
+		Set Val 4
+		OR8 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+OR16 (ADDRESS) (VALUE)
+	Bitwise 16-bit OR operation between value stored at address (ADDRESS) and (VALUE). Store the result in (ADDRESS).
+
+	Usage:
+		OR16 90A64C 4
+		
+		Set Addr 90A64C
+		Set Val 4
+		OR16 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+AND8 (ADDRESS) (VALUE)
+	Bitwise 8-bit AND operation between value stored at address (ADDRESS) and (VALUE). Store the result in (ADDRESS).
+
+	Usage:
+		AND8 90A64C 4
+		
+		Set Addr 90A64C
+		Set Val 4
+		AND8 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+AND16 (ADDRESS) (VALUE)
+	Bitwise 16-bit AND operation between value stored at address (ADDRESS) and (VALUE). Store the result in (ADDRESS).
+
+	Usage:
+		AND16 90A64C 4
+		
+		Set Addr 90A64C
+		Set Val 4
+		AND16 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+XOR8 (ADDRESS) (VALUE)
+	Bitwise 8-bit XOR operation between value stored at address (ADDRESS) and (VALUE). Store the result in (ADDRESS).
+
+	Usage:
+		XOR8 90A64C 4
+		
+		Set Addr 90A64C
+		Set Val 4
+		XOR8 Addr Val
+		
+///////////////////////////////////////////////////////////////////////
+
+XOR16 (ADDRESS) (VALUE)
+	Bitwise 16-bit XOR operation between value stored at address (ADDRESS) and (VALUE). Store the result in (ADDRESS).
+
+	Usage:
+		XOR16 90A64C 4
+		
+		Set Addr 90A64C
+		Set Val 4
+		XOR16 Addr Val
+
+///////////////////////////////////////////////////////////////////////
+
+If (ADDRESS) (COND)(DATATYPE) (VALUE)
+EndIf|EI
+	Compares the value at address (ADDRESS) with (VALUE), by using the condition (COND).
+	Always specify if to check for 1 byte or 2 bytes with (DATATYPE).
+	Always have an EndIf to indicate the termination of the If scope.
+		
+	(COND):
+		=	equality
+		!	inequality
+		<	less than
+		>	greater than
+		
+	(DATATYPE):
+		.	8-bit (1 byte)
+		:	16-bit (2 bytes)
+
+	Usage:
+		If 004AF8A4 =. 0xFF //If 0x4AF8A4's value equals to 0xFF (only check 1 byte)
+			Write32 01F2E740 1
+		EndIf
+		
+		Set MapID 004AF8A4
+		If MapID =: 6 //If 0x4AF8A4's value equals to 6 (check 2 bytes)
+			Write32 01F2E740 1
+		EndIf
+		
+		Set MapID 0x004AF8A4
+		Set ParisID 3
+		If MapID !: ParisID //If 0x4AF8A4's value is NOT equal to 3 (check 2 bytes)
+			Write32 01F2E740 1
+		EndIf
+		
+		If 004AF8A4 <: 6
+			Write32 01F2E740 1 //If 0x4AF8A4's value is less than 6 (check 2 bytes)
+		EndIf
+		
+		If 004AF8A4 >: 0x12
+			Write32 01F2E740 1 //If 0x4AF8A4's value is greater than 0x12 (check 2 bytes)
+		EndIf
+	
+///////////////////////////////////////////////////////////////////////
+
+_/|\-/|\-/|\-/|\_
+(4) Example code
+_/|\-/|\-/|\-/|\_
+
+Set MapID 0x3E1110
+Set ParisID 3
+Set JobID 0x67381C
+Set CharBase 0x2E1E40
+Set TransOff 0x58
+Set XCoordOff 0x30
+Set CharHP 3D4AB0
+Set CharHPMax 40
+Set MyStr "Parkour_Start\0"
+
+If MapID =: ParisID
+	SendRaw " //If in paris"
+	If JobID !. 0xFF
+		SendRaw "\t //If not in a job"
+		WritePointerFloat CharBase,TransOff,XCoordOff 1500 //write 1500 (in float) to the character's x coordinate
+	EndIf
+	Write32 CharHP CharHPMax //Set the character's hp to 40
+	WriteString 0x87310 MyStr
+EndIf
+
+_/|\-/|\-/|\-/|\-/|\_
+(4B) Outputs:
+_/|\-/|\-/|\-/|\-/|\_
+
+E0090003 003E1110 //If in paris
+E10300FF 1067381C	 //If not in a job
+602E1E40 44BB8000
+00020002 00000058
+00000030 00000000
+203D4AB0 00000028
+20087310 6B726150
+20087314 5F72756F
+20087318 72617453
+1008731C 00000074
+
+///////////////////////////////////////////////////////////////////////
+
+_/|\-/|\-/|\_
+(5) Credits
+_/|\-/|\-/|\_
+
+Author:
+- NiV-L-A
+
+Special thanks to:
+- Sly Cooper Modding Discord Server: https://discord.gg/2GSXcEzPJA
+- Luigi Auriemma's QuickBMS: http://aluigi.altervista.org/quickbms.htm
+- ScintillaNET.Demo by robinrodricks: https://github.com/robinrodricks/ScintillaNET.Demo
+- Icon made by Cooper941: https://www.youtube.com/@Cooper941
+
+Useful links:
+- https://github.com/root670/CheatDevicePS2/wiki/Code-Types
+- https://github.com/zzamizz/weed-sheet/wiki/PNACH-Code-Types
+- https://github.com/mlafeldt/ps2rd/blob/master/Documentation/code_types.txt
+- https://github.com/root670/CheatDevicePS2/blob/master/engine/engine_asm.S
+- https://github.com/PCSX2/pcsx2/blob/fdabc82342d82227901c9a709b10f02dfe1801a3/pcsx2/Patch_Memory.cpp
+
+///////////////////////////////////////////////////////////////////////
