@@ -5,6 +5,7 @@
 
 ## Description ##
 - CLPS2C is a domain-specific language, built specifically for writing PS2 cheat codes. Please, refer to the [CLPS2C Documentation](https://github.com/NiV-L-A/CLPS2C/blob/main/CLPS2C_Documentation.txt) file for more information.
+- Current version: 0.1
 
 ## TO-DO ##
 - Implement WritePointerString, WritePointerBytes and ConstantSerialWrite commands
