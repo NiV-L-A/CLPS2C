@@ -24,7 +24,7 @@ _/|\-/|\-/|\_
 (1) Changelog
 _/|\-/|\-/|\_
 
-Version 0.2 (Date)
+Version 0.2 (31/05/2023)
 	- Added support for writing in MIPS assembly.
 		- Implemented the Keystone engine (version 0.9.2) to parse and assemble the instructions.
 			- Keystone.Net.dll was acquired by building the Keystone.Net project in Release mode, with target framework .Net Standard 2.0. The project can be found at https://github.com/keystone-engine/keystone/tree/master/bindings/csharp.
