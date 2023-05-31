@@ -5,15 +5,14 @@
 
 ## Description ##
 - CLPS2C is a domain-specific language, built specifically for writing PS2 cheat codes. Please, refer to the [CLPS2C Documentation](https://github.com/NiV-L-A/CLPS2C/blob/main/CLPS2C_Documentation.txt) file for more information.
-- Current version: 0.1
-![](https://github.com/NiV-L-A/CLPS2C/blob/main/CLPS2C/Img/show1.png)
+- Current version: 0.2
+![](https://github.com/NiV-L-A/CLPS2C/blob/main/CLPS2C/Img/show2.png)
 
 ## TO-DO ##
 - Implement WritePointerString, WritePointerBytes and ConstantSerialWrite commands
-- Write Emotion Engine assembly code (MIPS R5900)
-- Check for multiple conditions in a single if command.
-- Better code to remove comments (to avoid the use of Microsoft.CodeAnalysis)
+- Check for multiple conditions in a single if command
 - Multiple Scintilla's TextArea tabs
+- Better output window
 - Custom background color
 - Custom command abbreviations
 - Custom font
@@ -30,3 +29,4 @@ Special thanks to:
 - Luigi Auriemma's QuickBMS: http://aluigi.altervista.org/quickbms.htm
 - ScintillaNET.Demo by robinrodricks: https://github.com/robinrodricks/ScintillaNET.Demo
 - Icon made by Cooper941: https://www.youtube.com/@Cooper941
+- MIPS assembler engine from Keystone-engine https://www.github.com/keystone-engine/keystone

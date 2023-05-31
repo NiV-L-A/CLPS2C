@@ -1,41 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Drawing;
 using ScintillaNET;
+using Keystone;
 using static CLPS2C.Util;
 
 namespace CLPS2C
 {
     public partial class Form1 : Form
     {
+        //For keeping output's window scroll bar position after sync
+        [DllImport("user32.dll")]
+        static extern int SetScrollPos(IntPtr hWnd, int nBar, int nPos, bool bRedraw);
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern int GetScrollPos(IntPtr hWnd, int nBar);
+        [DllImport("user32.dll")]
+        private static extern bool PostMessageA(IntPtr hWnd, int nBar, int wParam, int lParam);
+        [DllImport("user32.dll")]
+        static extern bool GetScrollRange(IntPtr hWnd, int nBar, out int lpMinPos, out int lpMaxPos);
         Scintilla TextArea;
         private static uint SyncsCount = 0;
-        private static string Version = "0.1";
+        private static string Version = "0.2";
+        private static string CurrentFile = "";
+        private static List<string> Snippets = new List<string>();
         private static Encoding CurrEnc = Encoding.UTF8;
         private static Regex Ifrx = new Regex(@"^.+?[=!<>][.:]\s");
         private static Dictionary<string, string> CommandsDict = new Dictionary<string, string>();
+        private static List<string> AutoCList = new List<string>();
 
         public void Sync()
         {
             SyncsCount += 1;
             LbLSyncs.Text = $"Syncs: {SyncsCount}";
+            if (!TxtCodeConv.InvokeRequired && MenuStripScrollPosition.Checked)
+                CorrectTxtCodeConvScrollBarPosition();
             TxtCodeConv.Clear();
             bool Error = false;
-            CurrEnc = Encoding.UTF8;
-            List<LocalVar_t> ListSets = new List<LocalVar_t>();
-            List<Command_t> ListCommands = new List<Command_t>();
-            List<string> Lines = new List<string>();
-            List<string> NewLines = new List<string>();
+            bool InAsmScope = false; //If in assembly region. Can be changed with the ASM_START command
+            uint AsmStartAddress = 0; //(ADDRESS) argument for the ASM_START command
+            CurrEnc = Encoding.UTF8; //Current encoding. Can be changed with the SetEncoding command
+            List<LocalVar_t> ListSets = new List<LocalVar_t>(); //List of local variables set with the Set command
+            List<Command_t> ListCommands = new List<Command_t>(); //List of all CLPS2C's commands in TextArea. Used to fill the nn for the E codes
+            List<string> Lines = new List<string>(); //TextArea lines
+            List<string> NewLines = new List<string>(); //Output lines
+            List<(string, int)> AsmLines = new List<(string, int)>(); //Lines in assembly region + how many lines they output
+            Engine ks = null;
             Lines = TextArea.Lines.ToList().Select(i => i.Text).ToList();
-            if (Lines.Count == 1)
-                if (Lines[0] == "")
-                    return;
-            Lines = TextCleanUp(Lines);
-            Lines = RemoveComments(Lines).Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList();
+            if (Lines.Count == 1 && Lines[0] == "")
+                return;
+            Lines = TextCleanUp(Lines); //Remove \t, remove whitespace (including NewLine), remove comments
             foreach (var line in Lines.OfType<string>().Select((CurrentLine, CurrentLineIndex) => new { CurrentLine, CurrentLineIndex }))
             {
                 if(line.CurrentLine == "")
@@ -48,6 +67,39 @@ namespace CLPS2C
                     TxtCodeConv.Text = PrintError(ERROR.WRONG_SYNTAX, CurrentLine, CurrentLineIndex);
                     break;
                 }
+
+                if (InAsmScope)
+                {
+                    if (CurrCommand.FullLine.ToUpper() == "ASM_END")
+                    {
+                        InAsmScope = false;
+                        if (AsmLines.Count > 0) //no asm instructions in the asm region
+                        {
+                            NewLines.Add(HandleAsmEnd(AsmLines, ks, ref AsmStartAddress, out Error));
+                            AsmLines.Clear();
+                            AsmStartAddress = 0;
+                            if (Error)
+                            {
+                                string msg = $"{CurrCommand.FullLine}{Environment.NewLine}{Environment.NewLine}Reason:{Environment.NewLine}{NewLines[NewLines.Count - 1]}";
+                                TxtCodeConv.Text = PrintError(ERROR.WRONG_SYNTAX, msg, CurrCommand.LineIdx);
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+                    AsmLines.Add(HandleAsm(CurrCommand, ks, out Error));
+                    if (Error)
+                    {
+                        string text = AsmLines[AsmLines.Count - 1].Item1;
+                        string msg = CurrCommand.FullLine;
+                        if (text != "")
+                            msg += $"{Environment.NewLine}{Environment.NewLine}Reason:{Environment.NewLine}{text}";
+                        TxtCodeConv.Text = PrintError(ERROR.WRONG_SYNTAX, msg, CurrCommand.LineIdx);
+                        break;
+                    }
+                    continue;
+                }
+
                 if (CommandsDict.ContainsKey(CurrCommand.Type)) //Switch type if abbreviation
                     CurrCommand.Type = CommandsDict[CurrCommand.Type];
 
@@ -109,6 +161,11 @@ namespace CLPS2C
                         NewLines.Add(HandleIf(CurrCommand, ListSets, out Error));
                         break;
                     case "ENDIF":
+                        break;
+                    case "ASM_START":
+                        HandleAsmStart(CurrCommand, ListSets, out Error, out AsmStartAddress);
+                        InAsmScope = true;
+                        ks = new Engine(Keystone.Architecture.MIPS, Mode.MIPS32) { ThrowOnError = false };
                         break;
                     default:
                         Error = true;
@@ -172,6 +229,7 @@ namespace CLPS2C
                 return;
             }
 
+            //CurrEnc = Encoding.GetEncoding(CurrCommand.Data[0]);
             switch (CurrCommand.Data[0])
             {
                 case "UTF-8":
@@ -190,6 +248,8 @@ namespace CLPS2C
         private string HandleSendRaw(Command_t CurrCommand, List<LocalVar_t> ListSets, out bool Error)
         {
             Error = false;
+            if (!MenuStripSendRaw.Checked)
+                return "";
             string value = "";
             if (CurrCommand.NWords != 2)
             {
@@ -494,7 +554,7 @@ namespace CLPS2C
                 TxtCodeConv.Text = PrintError(ERROR.VALUE_INVALID, CurrCommand.FullLine, CurrCommand.LineIdx);
                 return "";
             }
-            Arr = value.Split().Select(t => byte.Parse(t, NumberStyles.AllowHexSpecifier)).ToArray(); //"00 11 22 33" -> 0x00,0x11,0x22,0x33
+            Arr = value.Split().Select(t => byte.Parse(t, System.Globalization.NumberStyles.AllowHexSpecifier)).ToArray(); //"00 11 22 33" -> 0x00,0x11,0x22,0x33
 
             W32Count = Arr.Length / 4; //How many W32
             WXCount = Arr.Length % 4; //How many W8 + W16
@@ -1196,8 +1256,115 @@ namespace CLPS2C
             }
         }
 
+        private void HandleAsmStart(Command_t CurrCommand, List<LocalVar_t> ListSets, out bool Error, out uint AsmStartAddress)
+        {
+            Error = false;
+            AsmStartAddress = 0;
+            string address = "";
+            if (CurrCommand.NWords != 2)
+            {
+                Error = true;
+                TxtCodeConv.Text = PrintError(ERROR.WRONG_SYNTAX, CurrCommand.FullLine, CurrCommand.LineIdx);
+                return;
+            }
+
+            //swap if needed
+            if (IsVarDeclared(CurrCommand.Data, ListSets, 0))
+                address = SwapVarWithValue(CurrCommand.Data, ListSets, 0);
+            else
+                address = CurrCommand.Data[0];
+
+            ///////////
+            //ADDRESS//
+            ///////////
+            if (!IsAddressValid(address))
+            {
+                Error = true;
+                TxtCodeConv.Text = PrintError(ERROR.ADDRESS_INVALID, CurrCommand.FullLine, CurrCommand.LineIdx);
+                return;
+            }
+            address = Convert.ToUInt32(address, 16).ToString("X8");
+            address = ("2" + address.Remove(0, 1)); //W32
+            AsmStartAddress = Convert.ToUInt32(address, 16);
+        }
+
+        private (string,int) HandleAsm(Command_t CurrCommand, Engine ks, out bool Error)
+        {
+            Error = false;
+            byte[] Arr = ks.Assemble(CurrCommand.FullLine, 0, out int size, out int StatCount);
+            KeystoneError KSErr = ks.GetLastKeystoneError();
+
+            if (KSErr != KeystoneError.KS_ERR_ASM_SYMBOL_MISSING)
+            {
+                if (KSErr != KeystoneError.KS_ERR_OK)
+                {
+                    Error = true;
+                    return (Engine.ErrorToString(KSErr), 0);
+                }
+                else
+                {
+                    if (Arr.Length == 0)
+                    {
+                        Error = true;
+                        return ("", 0);
+                    }
+                }
+            }
+            else //size here is 0, so let's just default to 4 bytes (1 instruction)
+            {
+                size = 4;
+            }
+            size = size / 4;
+            return (CurrCommand.FullLine, size);
+        }
+
+        private string HandleAsmEnd(List<(string, int)> AsmLines, Engine ks, ref uint AsmStartAddress, out bool Error)
+        {
+            Error = false;
+            string temp = "";
+            List<string> stringList = AsmLines.Select(tuple => tuple.Item1).ToList();
+            string code = string.Join("; ", stringList);
+            byte[] arr = ks.Assemble(code, 0, out int size, out int statCount);
+
+            if (arr == null || arr.Length == 0) //t1 instead of $t1; wrong opcode
+            {
+                Error = true;
+                return Engine.ErrorToString(ks.GetLastKeystoneError());
+            }
+
+            if (MenuStripShowOpCodes.Checked)
+            {
+                var k = 0;
+                for (int i = 0; i < AsmLines.Count; i++)
+                {
+                    var CurrCount = AsmLines[i].Item2;
+                    for (int j = 0; j < CurrCount; j++)
+                    {
+                        uint val = BitConverter.ToUInt32(arr, k * 4);
+                        temp += $"{Environment.NewLine}{AsmStartAddress:X8} {val:X8}";
+                        if (j == 0)
+                            temp += $" //{AsmLines[i].Item1}";
+                        AsmStartAddress += 4;
+                        k++;
+                    }
+                }
+            }
+            else
+            {
+                size = size / 4; //LinesCount
+                for (int i = 0; i < size; i++)
+                {
+                    uint val = BitConverter.ToUInt32(arr, i * 4);
+                    temp += $"{Environment.NewLine}{AsmStartAddress:X8} {val:X8}";
+                    AsmStartAddress += 4;
+                }
+            }
+            return temp;
+        }
+
         private void SetDict()
         {
+            //CommandsDict.Add("SET",     "SET");
             CommandsDict.Add("SE",      "SETENCODING");
             CommandsDict.Add("SR",      "SENDRAW");
             CommandsDict.Add("W8",      "WRITE8");
@@ -1217,12 +1384,110 @@ namespace CLPS2C
             CommandsDict.Add("D8",      "DECREMENT8");
             CommandsDict.Add("D16",     "DECREMENT16");
             CommandsDict.Add("D32",     "DECREMENT32");
+            //CommandsDict.Add("OR8",     "OR8");
+            //CommandsDict.Add("OR16",    "OR16");
+            //CommandsDict.Add("AND8",    "AND8");
+            //CommandsDict.Add("AND16",   "AND16");
+            //CommandsDict.Add("XOR8",    "XOR8");
+            //CommandsDict.Add("XOR16",   "XOR16");
+            //CommandsDict.Add("IF",      "IF");
             CommandsDict.Add("EI",      "ENDIF");
+        }
+
+        private void SetAutoCList()
+        {
+            AutoCList.Clear();
+            List<string> keys = CommandsDict.Keys.ToList();
+            AutoCList.AddRange(keys);
+            //List<string> values = CommandsDict.Values.ToList();
+            //AutoCList.AddRange(values);
+        }
+
+        private void ParseSnippetFile()
+        {
+            string f = AppDomain.CurrentDomain.BaseDirectory + "Snippets.txt";
+            string Error = $"The snippet function is disabled.\nPlease, read the documentation on the syntax of the snippets.\n\nTried file path:\n{f}";
+            if (!File.Exists(f))
+            {
+                MessageBox.Show($"The \"Snippets.txt\" file does not exist.\n{Error}", "File does not exist", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MenuStripSnippet.ForeColor = Color.Red;
+                return;
+            }
+
+            string[] s = File.ReadAllLines(f);
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (s[i].StartsWith("Snippet") && s[i].Contains(":"))
+                {
+                    List<string> Words = s[i].Split(':').ToList();
+                    var WordsCount = Words.Count();
+
+                    if (WordsCount > 1) //multiple sub-menus?
+                    {
+                        string Word = Words[0]; //SnippetExCode
+                        string MenuWord = Words[1]; //Example Code
+
+                        if (WordsCount == 2) //SnippetExCode:Example Code
+                        {
+                            Snippets.Add(GetSnippet(s, Word, Word + "End", i + 1, out int EndedAt));
+                            MenuStripSnippet.DropDown.Items.Add(MenuWord, null, DropDown_Click);
+                            i = EndedAt;
+                        }
+                        else //sub-menu. SnippetParentAsm:Assembly:Arithmetic instructions
+                        {
+                            string SubWord = Words[2];
+                            bool MenuWordExists = MenuStripSnippet.DropDownItems.Cast<ToolStripMenuItem>().Any(x => x.Text == MenuWord);
+                            if (!MenuWordExists)
+                                MenuStripSnippet.DropDown.Items.Add(MenuWord);
+
+                            Snippets.Add(GetSnippet(s, Word, Word + "End", i + 1, out int EndedAt));
+                            i = EndedAt;
+
+                            var idx = GetMenuItemIndexByText(MenuStripSnippet, MenuWord);
+                            if (idx != -1)
+                                (MenuStripSnippet.DropDown.Items[idx] as ToolStripMenuItem).DropDownItems.Add(SubWord, null, DropDown_Click);
+                        }
+                    }
+                }
+            }
+
+            if (Snippets.Count == 0)
+            {
+                MessageBox.Show($"The \"Snippets.txt\" does not contain any valid snippets.\n{Error}", "No snippets found in file", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MenuStripSnippet.ForeColor = Color.Red;
+                return;
+            }
+        }
+
+        private void DropDown_Click(object sender, EventArgs e)
+        {
+            ToolStripMenuItem Item = sender as ToolStripMenuItem;
+            int Idx = GetItemIdxInMenu(Item, MenuStripSnippet);
+
+            if (Item != null/* && idx != -1*/)
+            {
+                TextArea.InsertText(TextArea.CurrentPosition, Snippets[Idx]);
+                TextArea.GotoPosition(TextArea.CurrentPosition + Snippets[Idx].Length);
+            }
+        }
+
+        public void CorrectTxtCodeConvScrollBarPosition()
+        {
+            int Off = (TxtCodeConv.ClientSize.Height - SystemInformation.HorizontalScrollBarHeight) / TxtCodeConv.Font.Height;
+            int VPos = GetScrollPos(TxtCodeConv.Handle, 1);
+            GetScrollRange(TxtCodeConv.Handle, 1, out _, out int VSmax);
+            if (VPos >= (VSmax - Off - 1))
+            {
+                GetScrollRange(TxtCodeConv.Handle, 1, out _, out VSmax);
+                VPos = VSmax - Off;
+            }
+            SetScrollPos(TxtCodeConv.Handle, 1, VPos, true);
+            PostMessageA(TxtCodeConv.Handle, 0x115, 4 + 0x10000 * VPos, 0);
         }
 
         public Form1()
         {
-            System.Threading.Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             InitializeComponent();
             Text = $"CLPS2C (v{Version})";
         }
@@ -1240,24 +1505,71 @@ namespace CLPS2C
             Scint.InitBookmarkMargin(TextArea); // BOOKMARK MARGIN
             Scint.InitCodeFolding(TextArea); // CODE FOLDING MARGIN
             Scint.InitHotkeys(this);
-            TextArea.AdditionalSelectionTyping = true; //Column edit mode
+            TextArea.AdditionalSelectionTyping = true; //Column edit mode while in rectangular selection
             TextArea.UseTabs = true;
+            TextArea.AutoCIgnoreCase = true;
             TextArea.KeyDown += TextArea_KeyDown;
+            TextArea.KeyPress += TextArea_KeyPress;
+            TextArea.TextChanged += TextArea_TextChanged;
             SetDict();
+            SetAutoCList();
+            ParseSnippetFile();
+        }
+
+        private void TextArea_TextChanged(object sender, EventArgs e)
+        {
+            //Autocompletion list logic
+            if (MenuStripAutoC.Checked)
+            {
+                string CurrWord = TextArea.GetWordFromPosition(TextArea.WordStartPosition(TextArea.CurrentPosition, true));
+                if (CurrWord == "" || CurrWord.Length == 1 && CurrWord[0] >= '0' && CurrWord[0] <= '9') //enter or single digit number
+                    return;
+                SetAutoCList(); //Setup default AutoCList
+                MatchCollection Words = Regex.Matches(TextArea.Text, @"\b\w+\b"); //Get all the words
+                IEnumerable<string> WordsNoDupl = Words.OfType<Match>().Select(m => m.Value).Distinct(); //Remove duplicates
+                WordsNoDupl.ToList().ForEach(x => AutoCList.Add(x)); //Add all words to AutoCList
+                //If this is the first time that the word has been written, ignore it
+                if (Regex.Matches(TextArea.Text, $@"\b{CurrWord}\b").Count == 1)
+                    AutoCList.Remove(CurrWord);
+                AutoCList = AutoCList.Where(x => x.StartsWith(CurrWord)).ToList(); //Filter List
+                AutoCList = AutoCList.Distinct().ToList(); //Remove duplicates
+                TextArea.AutoCShow(CurrWord.Length - 1, string.Join(" ", AutoCList)); //Display list
+            }
+
+            //If a file has been opened, and the text of the form doesn't start with "*" (file has been modified since the opening)
+            if (CurrentFile != "" && !Text.StartsWith("*"))
+                if (TextArea.Text != File.ReadAllText(CurrentFile))
+                    Text = "*" + Text;
+        }
+
+        private void TextArea_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            //Prevent control characters from getting inserted into TextArea
+            if (e.KeyChar < 32)
+            {
+                e.Handled = true;
+                return;
+            }
         }
 
         private void TextArea_KeyDown(object sender, KeyEventArgs e)
         {
-            //Auto-indentation
-            if (e.KeyCode == Keys.Enter && MenuStripAutoIndent.Checked)
+            if (e.KeyCode == Keys.Enter)
             {
-                int PrevLineIdx = TextArea.CurrentLine;
-                string PrevLine = TextArea.Lines.ToList().Select(i => i.Text).ToList()[PrevLineIdx];
-                //string PrevLine = TextArea.Lines[TextArea.CurrentLine - 1].Text;
-                int TabCount = PrevLine.Count(c => c == '\t');
-                TextArea.InsertText(TextArea.CurrentPosition, Environment.NewLine + new string('\t', TabCount));
-                TextArea.GotoPosition(TextArea.CurrentPosition + Environment.NewLine.Length + TabCount);
-                e.SuppressKeyPress = true;
+                //Auto-indentation
+                if (MenuStripAutoIndent.Checked)
+                {
+                    int PrevLineIdx = TextArea.CurrentLine;
+                    string PrevLine = TextArea.Lines.ToList().Select(i => i.Text).ToList()[PrevLineIdx];
+                    //string PrevLine = TextArea.Lines[TextArea.CurrentLine - 1].Text;
+                    int TabCount = PrevLine.Count(c => c == '\t');
+                    TextArea.InsertText(TextArea.CurrentPosition, Environment.NewLine + new string('\t', TabCount));
+                    TextArea.GotoPosition(TextArea.CurrentPosition + Environment.NewLine.Length + TabCount);
+                    e.SuppressKeyPress = true;
+                }
+                //If user presses enter while a autocompletion list is on, cancel it
+                if (TextArea.AutoCActive)
+                    TextArea.AutoCCancel();
             }
         }
 
@@ -1266,12 +1578,84 @@ namespace CLPS2C
             Sync();
         }
 
+        private void BtnCopy_Click(object sender, EventArgs e)
+        {
+            if (TxtCodeConv.Text == "")
+            {
+                Clipboard.Clear();
+                return;
+            }
+            Clipboard.SetText(TxtCodeConv.Text);
+        }
+
         private void MenuStripPCSX2Format_CheckedChanged(object sender, EventArgs e)
         {
             if (MenuStripPCSX2Format.Checked)
                 TxtCodeConv.Lines = ConvertToPCSX2Format(TxtCodeConv.Lines);
             else
                 TxtCodeConv.Lines = ConvertToRAWFormat(TxtCodeConv.Lines);
+        }
+
+        private void MenuStripFileOpen_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "All files (*.*)|*.*";
+            ofd.RestoreDirectory = true;
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                TextArea.Text = File.ReadAllText(ofd.FileName);
+                CurrentFile = ofd.FileName;
+                Text = $"CLPS2C (v{Version}) - {Path.GetFileName(CurrentFile)}";
+            }
+        }
+
+        private void MenuStripFileSave_Click(object sender, EventArgs e)
+        {
+            if (CurrentFile == "") //If no file has been opened yet
+            {
+                MenuStripFileSaveAs_Click(sender, e);
+            }
+            else if (Text.StartsWith("*"))
+            {
+                File.WriteAllText(CurrentFile, TextArea.Text);
+                Text = Text.Remove(0, 1); //Remove "*" character if file has been modified
+            }
+                
+        }
+
+        private void MenuStripFileSaveAs_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "All files (*.*)|*.*";
+            sfd.RestoreDirectory = true;
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                File.WriteAllText(sfd.FileName, TextArea.Text);
+                if (CurrentFile == "") //If clicked Save without opening a file, open that same file
+                    CurrentFile = sfd.FileName;
+                Text = $"CLPS2C (v{Version}) - {Path.GetFileName(CurrentFile)}";
+            }
+        }
+
+        private void MenuStripFileNew_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Create a new file?\nThis action will erase the contents of the text editor.", "Create file", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                CurrentFile = "";
+                Text = $"CLPS2C (v{Version})";
+                TextArea.Text = "";
+            }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (CurrentFile == "" || Text.StartsWith("*"))
+            {
+                if (MessageBox.Show($"You have unsaved files!\nAre you sure you want to close the app?", "Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                {
+                    e.Cancel = true;
+                }
+            }
         }
     }
 }

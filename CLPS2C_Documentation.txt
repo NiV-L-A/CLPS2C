@@ -2,7 +2,7 @@
 
 
 CLPS2C (Custom Language for PlayStation 2 Cheats)
-Version: 0.1
+Version: 0.2
 GitHub: https://github.com/NiV-L-A/CLPS2C
 
 
@@ -13,8 +13,9 @@ Table Of Contents:
 (1) Changelog
 (2) Description and Settings
 (3) List of commands
-(4) Example code
-(5) Credits
+(4) Snippets
+(5) Example code
+(6) Credits
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -22,6 +23,52 @@ Table Of Contents:
 _/|\-/|\-/|\_
 (1) Changelog
 _/|\-/|\-/|\_
+
+Version 0.2 (Date)
+	- Added support for writing in MIPS assembly.
+		- Implemented the Keystone engine (version 0.9.2) to parse and assemble the instructions.
+			- Keystone.Net.dll was acquired by building the Keystone.Net project in Release mode, with target framework .Net Standard 2.0. The project can be found at https://github.com/keystone-engine/keystone/tree/master/bindings/csharp.
+			- keystone.dll was acquired by downloading the source code and following the guide at https://github.com/keystone-engine/keystone/blob/master/docs/COMPILE-WINDOWS.md.
+				- NOTE: After running the "..\nmake-dll.bat" command, no .dll was created in "\build\llvm\lib", contrary to what the guide says. Instead, the .dll was in the "\build\llvm\bin" directory.
+				- NOTE: Before building keystone.dll, the file located at "\llvm\include\llvm\MC\MCInstrDesc.h" has been changed so that the function "hasDelaySlot()" will always return false.
+	- Added an autocompletion list.
+		- The list pops up automatically as text is inserted into TextArea.
+		- By default, the list has the abbreviated commands listed in CLPS2C_Documentation.txt.
+		- The list auto-fills with words that have already been written before.
+	- Added the snippets function. Paste the snippets through the Snippets menu.
+		- By using the Snippets.txt file in the same path as the executable, the app can load chunk of text from it.
+		- The file can be changed manually to provide custom snippets. Read the section "Snippets" in CLPS2C_Documentation.txt to know more about the syntax of the snippets.
+		- Note that the app reads the file only once, on startup. If you modify the file, you must restart the app for the changes to take effect.
+		- If the file can't be found or if the file has no valid snippets, an error message will pop up saying so. In either case, the snippets function gets disabled.
+	- Added File->New (Ctrl+N).
+		- Creates a temporary new file.
+	- Added File->Open (Ctrl+O).
+		- When opening a file, the window's title is changed to the filename of the file opened.
+		- If the file opened has been modified since the opening, the character "*" will appear in the window's title.
+	- Added File->Save (Ctrl+S).
+		- If the file has been modified and has been saved, the "*" character gets removed.
+	- Added File->Save as... (Ctrl+Shift+S).
+	- Added Settings->Keep output's window scroll bar position.
+	- Added Settings->Enable SendRaw command.
+	- Added Settings->Enable auto-completion list.
+	- Added Settings->Write opcodes as comments in assembly's output.
+	- Changed Settings->Auto-indentation to Settings->Enable auto-indentation.
+	- Added a button to copy to clipboard the contents of the output's window.
+	- Added a message that pops up if the user is about to close the app and the current file has not been saved.
+	- Added regex to remove comments.
+	- Removed usage of Microsoft.CodeAnalysis to remove comments.
+	- Removed redundant packages from project.
+	- Polished code.
+	- Changed CLPS2C_Documentation.txt structure format.
+	- Fixed bugs:
+		- Prevent control characters from getting inserted into TextArea.
+		- Fixed a bug when only writing "" in TextArea and then sync.
+	- Known bugs:
+		- RemoveComments() doesn't detect single line comments in which quotes are present (example: SendRaw " //"OKAY").
+		- E-type codes have a maximum of 0xFF lines that they can execute. CLPS2C ignores it.
+		- If a label is missing in the assembly region, the error line displayed is at the "ASM_END" line (not really a bug but let's say it is).
+		- Zooming in the TextArea window eventually hides the line indicator on the left.
+		- If an opcode has a period (for example: abs.s), the letters after the period will not be highlighted.
 
 Version 0.1 (23/03/2023)
 	- Initial Version
@@ -53,8 +100,8 @@ Press the F5 key or the CLPS2C text to "Sync" (parse the commands).
   \0	Appends 0x00 to the value (useful for terminating a string).
   \n	New line.
   \t	Tab.
-- Auto-indentation is enabled by default. It can be disabled in Settings->Auto-indentation
-- The app can translate the RAW codes in the output window to PCSX2-Format codes. Enable it in Settings->PCSX2-Format output
+- Auto-indentation is enabled by default. It can be disabled in Settings->Enable auto-indentation.
+- The app can translate the RAW codes in the output window to PCSX2-Format codes. Enable it in Settings->PCSX2-Format output.
 - CTRL-Z to undo, CTRL-Y to redo.
 - Hold ALT and left click to go in rectangular selection mode.
 
@@ -75,6 +122,8 @@ Unique
   Set (NAME) (VALUE)
   SetEncoding|SE (ENCODING)
   SendRaw|SR (VALUE)
+  ASM_START (ADDRESS)
+  ASM_END
 Write
   Write8|W8 (ADDRESS) (VALUE)
   Write16|W16 (ADDRESS) (VALUE)
@@ -158,6 +207,51 @@ SendRaw|SR (VALUE)
 		
 		Set myStr "//All her doubts were someone else's point of view"
 		SendRaw myStr
+
+///////////////////////////////////////////////////////////////////////
+
+ASM_START (ADDRESS)
+ASM_END
+	Defines the beginning and ending of an assembly region.
+	In this region, all the other CLPS2C commands can't be executed.
+	In this region, values set with the Set command will not be applied.
+	Labels can be used, but the first instruction must be on the same line as the label.
+	Every register must be prefixed with the dollar sign ($).
+	Always have an ASM_END to indicate the termination of the assembly scope.
+	NOTE: You must manually add the branch delay slot after any branch instruction.
+	
+	Usage:
+	ASM_START 003D1000
+		addi $t2,$t1,0x0058 //$t2 = $t1 + 0x58
+	ASM_END
+	
+	Set Cave 203D1000
+	ASM_START Cave
+		/*Load immediate ($t0 = 0x003D10A0). Equivalent to "lui $t0,0x003D; ori $t0,$t0,0x10A0".*/
+		li $t0,0x003D10A0
+		/*Load word ($t0 = *0x003D10A0). Reads 4 bytes at the specified address and stores the value in the specified register.*/
+		/*Equivalent to "lui $t0,0x003D; lw $t0,0x10A0($t0)".*/
+		lw $t0,0x003D10A0
+		/*Load immediate in a float register. Loads 60f in the $f4 register.*/
+		li $t0,60 //load 60 as int in $t0.
+		mtc1 $t0,$f4 //move to coprocessor 1 (FPU)'s register $f4.
+		cvt.s.w $f4,$f4 //converts a word to a floating point (60 -> 60f).
+	ASM_END
+	
+	ASM_START 200FF000
+		//check flag
+		lw $t0,0x003D0D00
+		li $at,0x1
+		beq $t0,$at,DisableFlag //if flag == 1
+		nop
+		b Exit
+		nop
+		DisableFlag: li $at,0 //disable flag
+			lui $t0,0x003D
+			sw $at,0xD00($t0)
+		Exit: jr $ra //return
+			nop
+	ASM_END
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -540,8 +634,49 @@ EndIf|EI
 	
 ///////////////////////////////////////////////////////////////////////
 
+_/|\-/|\-/|\_
+(4) Snippets
+_/|\-/|\-/|\_
+
+By using the Snippets.txt file in the same path as the executable, the app can load chunk of text from it.
+You can paste the snippets through the Snippets menu.
+To create a custom snippet, the right syntax must be followed:
+
+Snippet[word]:[displayed word]
+[code]
+Snippet[word]End
+
+The beginning of the snippet must start with the word "Snippet", followed by any other word, for example:
+SnippetLoveMuse
+On the same line, add a colon (:), and then any sentence. The sentence after the colon will be the one displayed in the app. For example:
+SnippetLoveMuse:Paste love MUSE code
+After this line, the chunk of text that is going to be copied will begin. For example:
+SendRaw "I love MUSE!"
+To end the snippet, you must write "Snippet", then the word you used for the beginning of the snippet, but add the word "End" to it. For example:
+SnippetLoveMuseEnd
+Altogether, it shoud look something like this:
+
+SnippetLoveMuse:Paste love MUSE code
+SendRaw "I love MUSE!"
+SnippetLoveMuseEnd
+
+If you add these 3 lines in Snippets.txt, the next time you will open the app the Snippets menu will have the "Paste love MUSE code" entry.
+Sub-menus are possible by specifying the Parent menu:
+
+Snippet[word]:[displayed parent word]:[displayed word]
+[code]
+Snippet[word]End
+
+For example, if you want to create a menu in the Snippets menu called "Advanced", which has a sub-menu called "Paste hate MUSE code", you could do:
+
+SnippetHateMuse:Advanced:Paste hate MUSE code
+SendRaw "I hate MUSE!"
+SnippetHateMuseEnd
+
+///////////////////////////////////////////////////////////////////////
+
 _/|\-/|\-/|\-/|\_
-(4) Example code
+(5) Example code
 _/|\-/|\-/|\-/|\_
 
 Set MapID 0x3E1110
@@ -565,7 +700,7 @@ If MapID =: ParisID
 EndIf
 
 _/|\-/|\-/|\-/|\-/|\_
-(4B) Outputs:
+(5B) Outputs:
 _/|\-/|\-/|\-/|\-/|\_
 
 E0090003 003E1110 //If in paris
@@ -582,7 +717,7 @@ E10300FF 1067381C	 //If not in a job
 ///////////////////////////////////////////////////////////////////////
 
 _/|\-/|\-/|\_
-(5) Credits
+(6) Credits
 _/|\-/|\-/|\_
 
 Author:
@@ -593,12 +728,16 @@ Special thanks to:
 - Luigi Auriemma's QuickBMS: http://aluigi.altervista.org/quickbms.htm
 - ScintillaNET.Demo by robinrodricks: https://github.com/robinrodricks/ScintillaNET.Demo
 - Icon made by Cooper941: https://www.youtube.com/@Cooper941
+- MIPS assembler engine from Keystone-engine https://github.com/keystone-engine/keystone
 
 Useful links:
 - https://github.com/root670/CheatDevicePS2/wiki/Code-Types
 - https://github.com/zzamizz/weed-sheet/wiki/PNACH-Code-Types
+- https://slymods.info/wiki/Guide:Writing_pnach_files
 - https://github.com/mlafeldt/ps2rd/blob/master/Documentation/code_types.txt
 - https://github.com/root670/CheatDevicePS2/blob/master/engine/engine_asm.S
 - https://github.com/PCSX2/pcsx2/blob/fdabc82342d82227901c9a709b10f02dfe1801a3/pcsx2/Patch_Memory.cpp
+- https://math-atlas.sourceforge.net/devel/assembly/mips-iv.pdf
+- https://psi-rockin.github.io/ps2tek/
 
 ///////////////////////////////////////////////////////////////////////

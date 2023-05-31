@@ -1,5 +1,4 @@
-﻿using System;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using ScintillaNET;
 using static CLPS2C.Util;
@@ -44,11 +43,6 @@ namespace CLPS2C
             return Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
         }
 
-        private void OnTextChanged(object sender, EventArgs e)
-        {
-
-        }
-
         public static void InitColors(Scintilla TextArea)
         {
             TextArea.SetSelectionBackColor(true, IntToColor(0x114D9C));
@@ -63,8 +57,7 @@ namespace CLPS2C
             TextArea.Styles[Style.Default].BackColor = IntToColor(0x212121); //TextArea back color
             TextArea.Styles[Style.Default].ForeColor = IntToColor(0xFFFFFF);
             TextArea.CaretForeColor = Color.White;
-            TextArea.StyleClearAll();
-            
+            TextArea.StyleClearAll();            
             // Configure the CPP (C#) lexer styles
             TextArea.Styles[Style.Cpp.Identifier].ForeColor = IntToColor(0xD0DAE2);
             TextArea.Styles[Style.Cpp.Comment].ForeColor = IntToColor(0x40BF57); //0xBD758B
@@ -82,53 +75,32 @@ namespace CLPS2C
             TextArea.Styles[Style.Cpp.CommentDocKeyword].ForeColor = IntToColor(0xB3D991);
             TextArea.Styles[Style.Cpp.CommentDocKeywordError].ForeColor = IntToColor(0xFF0000);
             TextArea.Styles[Style.Cpp.GlobalClass].ForeColor = IntToColor(0x48A8EE);
-
             TextArea.Lexer = Lexer.Cpp;
-            string MainCommands = "Set SetEncoding SendRaw Write8 Write16 Write32 WriteFloat WriteString WriteBytes WritePointer8 WritePointer16 WritePointer32 WritePointerFloat CopyBytes Increment8 Increment16 Increment32 Decrement8 Decrement16 Decrement32 OR8 OR16 AND8 AND16 XOR8 XOR16 If EndIf";
+            string MainCommands = "Set SetEncoding SendRaw Write8 Write16 Write32 WriteFloat WriteString WriteBytes WritePointer8 WritePointer16 WritePointer32 WritePointerFloat CopyBytes Increment8 Increment16 Increment32 Decrement8 Decrement16 Decrement32 OR8 OR16 AND8 AND16 XOR8 XOR16 If EndIf ASM_START ASM_END";
             string AbbrevCommands = "SE SR W8 W16 W32 WF WS WB WP8 WP16 WP32 WPF CB SW I8 I16 I32 D8 D16 D32 EI";
-            TextArea.SetKeywords(0, MainCommands + " " + AbbrevCommands);
-        }
-
-        private void TextArea_MarginClick(object sender, MarginClickEventArgs e, Scintilla TextArea)
-        {
-            if (e.Margin == BOOKMARK_MARGIN)
-            {
-                // Do we have a marker for this line?
-                const uint mask = (1 << BOOKMARK_MARKER);
-                Line line = TextArea.Lines[TextArea.LineFromPosition(e.Position)];
-                if ((line.MarkerGet() & mask) > 0)
-                {
-                    // Remove existing bookmark
-                    line.MarkerDelete(BOOKMARK_MARKER);
-                }
-                else
-                {
-                    // Add bookmark
-                    line.MarkerAdd(BOOKMARK_MARKER);
-                }
-            }
+            string AsmOpCodes = "abs add addi addiu addu and andi div div divu divu mul mulo mulou mult multu neg negu nor not or ori rem remu rol ror sll sllv sra srav srl srlv sub subu xor xori b bczf bczt beq beqz bge bgeu bgez bgezal bgt bgtu bgtz ble bleu blez blt bltu bltz bltzal bne bnez j jal jalr jr seq sge sgeu sgt sgtu sle sleu slt slti sltiu sltu sne abs.d abs.s add.d add.s bc1f bc1t c.eq.d c.eq.s c.le.d c.le.s c.lt.d c.lt.s cvt.d.s cvt.d.w cvt.s.d cvt.s.w cvt.w.d cvt.w.s div.d div.s l.d l.s mfc1.d mov.d mov.s mul.d mul.s neg.d neg.s s.d s.s sub.d sub.s break nop rfe syscall la lb lbu ld lh lhu li lui lw lwc1 lwl lwr mfc1 mfhi mflo move mtc1 mthi mtlo sb sd sh sw swc1 swl swr ulh ulhu ulw ush usw";
+            string ASMRegGPR = "$zero $at $v0 $v1 $a0 $a1 $a2 $a3 $t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7 $s0 $s1 $s2 $s3 $s4 $s5 $s6 $s7 $t8 $t9 $k0 $k1 $gp $sp $fp $ra $pc $hi $lo";
+            string ASMRegFPU = "$f0 $f1 $f2 $f3 $f4 $f5 $f6 $f7 $f8 $f9 $f10 $f11 $f12 $f13 $f14 $f15 $f16 $f17 $f18 $f19 $f20 $f21 $f22 $f23 $f24 $f25 $f26 $f27 $f28 $f29 $f30 $f31";
+            TextArea.SetKeywords(0, MainCommands + " " + AbbrevCommands + " " + AsmOpCodes);
+            TextArea.SetKeywords(1, ASMRegGPR + " " + ASMRegFPU);
         }
 
         public static void InitNumberMargin(Scintilla TextArea)
         {
-
             TextArea.Styles[Style.LineNumber].BackColor = IntToColor(BACK_COLOR);
             TextArea.Styles[Style.LineNumber].ForeColor = IntToColor(FORE_COLOR);
             TextArea.Styles[Style.IndentGuide].ForeColor = IntToColor(FORE_COLOR);
             TextArea.Styles[Style.IndentGuide].BackColor = IntToColor(BACK_COLOR);
 
-            var nums = TextArea.Margins[NUMBER_MARGIN];
+            Margin nums = TextArea.Margins[NUMBER_MARGIN];
             nums.Width = 30;
             nums.Type = MarginType.Number;
             nums.Sensitive = true;
             nums.Mask = 0;
-
-            //TextArea.MarginClick += TextArea_MarginClick();
         }
 
         public static void InitBookmarkMargin(Scintilla TextArea)
         {
-
             //TextArea.SetFoldMarginColor(true, IntToColor(BACK_COLOR));
 
             var margin = TextArea.Margins[BOOKMARK_MARGIN];
@@ -143,7 +115,6 @@ namespace CLPS2C
             marker.SetBackColor(IntToColor(0xFF003B));
             marker.SetForeColor(IntToColor(0x000000));
             marker.SetAlpha(100);
-
         }
 
         public static void InitCodeFolding(Scintilla TextArea)

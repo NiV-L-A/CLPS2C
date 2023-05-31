@@ -37,9 +37,20 @@ namespace CLPS2C
             this.PanelTop = new System.Windows.Forms.Panel();
             this.PanelTopRight = new System.Windows.Forms.Panel();
             this.MenuStrip = new System.Windows.Forms.MenuStrip();
+            this.MenuStripFile = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripFileNew = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripFileOpen = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripFileSave = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripFileSaveAs = new System.Windows.Forms.ToolStripMenuItem();
             this.MenuStripSettings = new System.Windows.Forms.ToolStripMenuItem();
-            this.MenuStripPCSX2Format = new System.Windows.Forms.ToolStripMenuItem();
             this.MenuStripAutoIndent = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripAutoC = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripSendRaw = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripPCSX2Format = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripScrollPosition = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripShowOpCodes = new System.Windows.Forms.ToolStripMenuItem();
+            this.MenuStripSnippet = new System.Windows.Forms.ToolStripMenuItem();
+            this.BtnCopy = new System.Windows.Forms.Button();
             this.PanelTop.SuspendLayout();
             this.MenuStrip.SuspendLayout();
             this.SuspendLayout();
@@ -108,38 +119,84 @@ namespace CLPS2C
             // 
             this.PanelTopRight.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.PanelTopRight.Location = new System.Drawing.Point(114, 0);
+            this.PanelTopRight.Location = new System.Drawing.Point(202, 0);
             this.PanelTopRight.Name = "PanelTopRight";
-            this.PanelTopRight.Size = new System.Drawing.Size(686, 23);
+            this.PanelTopRight.Size = new System.Drawing.Size(598, 23);
             this.PanelTopRight.TabIndex = 0;
             // 
             // MenuStrip
             // 
             this.MenuStrip.Dock = System.Windows.Forms.DockStyle.Fill;
             this.MenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.MenuStripSettings});
+            this.MenuStripFile,
+            this.MenuStripSettings,
+            this.MenuStripSnippet});
             this.MenuStrip.Location = new System.Drawing.Point(0, 0);
             this.MenuStrip.Name = "MenuStrip";
             this.MenuStrip.Size = new System.Drawing.Size(800, 23);
             this.MenuStrip.TabIndex = 1;
             this.MenuStrip.Text = "menuStrip1";
             // 
+            // MenuStripFile
+            // 
+            this.MenuStripFile.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.MenuStripFileNew,
+            this.MenuStripFileOpen,
+            this.MenuStripFileSave,
+            this.MenuStripFileSaveAs});
+            this.MenuStripFile.Name = "MenuStripFile";
+            this.MenuStripFile.Size = new System.Drawing.Size(37, 19);
+            this.MenuStripFile.Text = "File";
+            // 
+            // MenuStripFileNew
+            // 
+            this.MenuStripFileNew.Name = "MenuStripFileNew";
+            this.MenuStripFileNew.ShortcutKeyDisplayString = "Ctrl+N";
+            this.MenuStripFileNew.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
+            this.MenuStripFileNew.Size = new System.Drawing.Size(195, 22);
+            this.MenuStripFileNew.Text = "New";
+            this.MenuStripFileNew.Click += new System.EventHandler(this.MenuStripFileNew_Click);
+            // 
+            // MenuStripFileOpen
+            // 
+            this.MenuStripFileOpen.Name = "MenuStripFileOpen";
+            this.MenuStripFileOpen.ShortcutKeyDisplayString = "Ctrl+O";
+            this.MenuStripFileOpen.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
+            this.MenuStripFileOpen.Size = new System.Drawing.Size(195, 22);
+            this.MenuStripFileOpen.Text = "Open";
+            this.MenuStripFileOpen.Click += new System.EventHandler(this.MenuStripFileOpen_Click);
+            // 
+            // MenuStripFileSave
+            // 
+            this.MenuStripFileSave.Name = "MenuStripFileSave";
+            this.MenuStripFileSave.ShortcutKeyDisplayString = "Ctrl+S";
+            this.MenuStripFileSave.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
+            this.MenuStripFileSave.Size = new System.Drawing.Size(195, 22);
+            this.MenuStripFileSave.Text = "Save";
+            this.MenuStripFileSave.Click += new System.EventHandler(this.MenuStripFileSave_Click);
+            // 
+            // MenuStripFileSaveAs
+            // 
+            this.MenuStripFileSaveAs.Name = "MenuStripFileSaveAs";
+            this.MenuStripFileSaveAs.ShortcutKeyDisplayString = "Ctrl+Shift+S";
+            this.MenuStripFileSaveAs.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.S)));
+            this.MenuStripFileSaveAs.Size = new System.Drawing.Size(195, 22);
+            this.MenuStripFileSaveAs.Text = "Save As...";
+            this.MenuStripFileSaveAs.Click += new System.EventHandler(this.MenuStripFileSaveAs_Click);
+            // 
             // MenuStripSettings
             // 
             this.MenuStripSettings.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.MenuStripAutoIndent,
+            this.MenuStripAutoC,
+            this.MenuStripSendRaw,
             this.MenuStripPCSX2Format,
-            this.MenuStripAutoIndent});
+            this.MenuStripScrollPosition,
+            this.MenuStripShowOpCodes});
             this.MenuStripSettings.Name = "MenuStripSettings";
             this.MenuStripSettings.Size = new System.Drawing.Size(61, 19);
             this.MenuStripSettings.Text = "Settings";
-            // 
-            // MenuStripPCSX2Format
-            // 
-            this.MenuStripPCSX2Format.CheckOnClick = true;
-            this.MenuStripPCSX2Format.Name = "MenuStripPCSX2Format";
-            this.MenuStripPCSX2Format.Size = new System.Drawing.Size(190, 22);
-            this.MenuStripPCSX2Format.Text = "PCSX2-Format output";
-            this.MenuStripPCSX2Format.CheckedChanged += new System.EventHandler(this.MenuStripPCSX2Format_CheckedChanged);
             // 
             // MenuStripAutoIndent
             // 
@@ -147,8 +204,67 @@ namespace CLPS2C
             this.MenuStripAutoIndent.CheckOnClick = true;
             this.MenuStripAutoIndent.CheckState = System.Windows.Forms.CheckState.Checked;
             this.MenuStripAutoIndent.Name = "MenuStripAutoIndent";
-            this.MenuStripAutoIndent.Size = new System.Drawing.Size(190, 22);
-            this.MenuStripAutoIndent.Text = "Auto-indentation";
+            this.MenuStripAutoIndent.Size = new System.Drawing.Size(343, 22);
+            this.MenuStripAutoIndent.Text = "Enable auto-indentation";
+            // 
+            // MenuStripAutoC
+            // 
+            this.MenuStripAutoC.Checked = true;
+            this.MenuStripAutoC.CheckOnClick = true;
+            this.MenuStripAutoC.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.MenuStripAutoC.Name = "MenuStripAutoC";
+            this.MenuStripAutoC.Size = new System.Drawing.Size(343, 22);
+            this.MenuStripAutoC.Text = "Enable auto-completion list";
+            // 
+            // MenuStripSendRaw
+            // 
+            this.MenuStripSendRaw.Checked = true;
+            this.MenuStripSendRaw.CheckOnClick = true;
+            this.MenuStripSendRaw.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.MenuStripSendRaw.Name = "MenuStripSendRaw";
+            this.MenuStripSendRaw.Size = new System.Drawing.Size(343, 22);
+            this.MenuStripSendRaw.Text = "Enable SendRaw command";
+            // 
+            // MenuStripPCSX2Format
+            // 
+            this.MenuStripPCSX2Format.CheckOnClick = true;
+            this.MenuStripPCSX2Format.Name = "MenuStripPCSX2Format";
+            this.MenuStripPCSX2Format.Size = new System.Drawing.Size(343, 22);
+            this.MenuStripPCSX2Format.Text = "PCSX2-Format output";
+            this.MenuStripPCSX2Format.CheckedChanged += new System.EventHandler(this.MenuStripPCSX2Format_CheckedChanged);
+            // 
+            // MenuStripScrollPosition
+            // 
+            this.MenuStripScrollPosition.Checked = true;
+            this.MenuStripScrollPosition.CheckOnClick = true;
+            this.MenuStripScrollPosition.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.MenuStripScrollPosition.Name = "MenuStripScrollPosition";
+            this.MenuStripScrollPosition.Size = new System.Drawing.Size(343, 22);
+            this.MenuStripScrollPosition.Text = "Keep output\'s window scroll bar position after sync";
+            // 
+            // MenuStripShowOpCodes
+            // 
+            this.MenuStripShowOpCodes.CheckOnClick = true;
+            this.MenuStripShowOpCodes.Name = "MenuStripShowOpCodes";
+            this.MenuStripShowOpCodes.Size = new System.Drawing.Size(343, 22);
+            this.MenuStripShowOpCodes.Text = "Write opcodes as comments in assembly\'s output";
+            // 
+            // MenuStripSnippet
+            // 
+            this.MenuStripSnippet.Name = "MenuStripSnippet";
+            this.MenuStripSnippet.Size = new System.Drawing.Size(64, 19);
+            this.MenuStripSnippet.Text = "Snippets";
+            // 
+            // BtnCopy
+            // 
+            this.BtnCopy.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.BtnCopy.Location = new System.Drawing.Point(516, 34);
+            this.BtnCopy.Name = "BtnCopy";
+            this.BtnCopy.Size = new System.Drawing.Size(75, 23);
+            this.BtnCopy.TabIndex = 12;
+            this.BtnCopy.Text = "Copy";
+            this.BtnCopy.UseVisualStyleBackColor = true;
+            this.BtnCopy.Click += new System.EventHandler(this.BtnCopy_Click);
             // 
             // Form1
             // 
@@ -156,6 +272,7 @@ namespace CLPS2C
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.BtnCopy);
             this.Controls.Add(this.LblCLPS2C);
             this.Controls.Add(this.PanelTop);
             this.Controls.Add(this.LbLSyncs);
@@ -164,6 +281,7 @@ namespace CLPS2C
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.MenuStrip;
             this.Name = "Form1";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.PanelTop.ResumeLayout(false);
             this.PanelTop.PerformLayout();
@@ -182,9 +300,20 @@ namespace CLPS2C
         private System.Windows.Forms.Panel PanelTop;
         private System.Windows.Forms.Panel PanelTopRight;
         private System.Windows.Forms.MenuStrip MenuStrip;
+        private System.Windows.Forms.Button BtnCopy;
         private System.Windows.Forms.ToolStripMenuItem MenuStripSettings;
         private System.Windows.Forms.ToolStripMenuItem MenuStripPCSX2Format;
         private System.Windows.Forms.ToolStripMenuItem MenuStripAutoIndent;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripScrollPosition;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripFile;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripFileOpen;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripFileSaveAs;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripSendRaw;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripFileSave;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripFileNew;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripAutoC;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripSnippet;
+        private System.Windows.Forms.ToolStripMenuItem MenuStripShowOpCodes;
     }
 }
 

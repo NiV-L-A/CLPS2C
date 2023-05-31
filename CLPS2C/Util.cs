@@ -1,5 +1,4 @@
-﻿using Microsoft.CodeAnalysis.CSharp;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -43,9 +42,11 @@ namespace CLPS2C
                     var Second = line.LastIndexOf('\"');
                     var LineLength = FullLine.Length;
                     var Idx = CountCharInRange(line, ' ', 0, First) - 1;
-                    if (LineLength > Second + 1 || !Data[Idx].StartsWith("\""))
+
+                    if (Idx == -1 || LineLength > Second + 1 || !Data[Idx].StartsWith("\""))
                     {
                         Error = true;
+                        return;
                     }
                     else
                     {
@@ -95,51 +96,51 @@ namespace CLPS2C
             }
         }
 
-        class CommentsRemover : CSharpSyntaxRewriter
-        {
-            public override Microsoft.CodeAnalysis.SyntaxTrivia VisitTrivia(Microsoft.CodeAnalysis.SyntaxTrivia trivia)
-            {
-                switch (trivia.Kind())
-                {
-                    case SyntaxKind.SingleLineCommentTrivia:
-                        return default;
-                    default:
-                        return trivia;
-                }
-            }
-        }
-
-        public static string RemoveComments(List<string> Lines)
-        {
-            Regex r1 = new Regex("(\\/\\*(.|\n)*?\\*\\/)");
-            Regex r2 = new Regex("(\\r\\n)");
-            string code = string.Join(Environment.NewLine, Lines);
-            MatchCollection matchList = Regex.Matches(code, r1.ToString());
-            var list = matchList.Cast<Match>().Select(match => match.Groups).ToList();
-            foreach (var item in list)
-            {
-                var CurrentMatch = item.SyncRoot.ToString();
-                int NewLinesCount = Regex.Matches(CurrentMatch, r2.ToString()).Count;
-                int IndexStart = matchList[0].Index;
-                int Length = matchList[0].Length;
-                string Str = string.Concat(Enumerable.Repeat(Environment.NewLine, NewLinesCount));
-                if (CurrentMatch.EndsWith("*/"))
-                {
-                    Str += "";
-                }
-                code = code.Remove(IndexStart, Length).Insert(IndexStart, Str);
-                matchList = Regex.Matches(code, r1.ToString());
-                list = matchList.Cast<Match>().Select(match => match.Groups).ToList();
-            }
-            Microsoft.CodeAnalysis.SyntaxTree tree = CSharpSyntaxTree.ParseText(code);
-            Microsoft.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax root = (Microsoft.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax)tree.GetRoot();
-            return new CommentsRemover().Visit(root).ToString();
-        }
-
         public static List<string> TextCleanUp(List<string> Lines)
         {
             Lines = Lines.Select(x => x.Replace("\t", "")).ToList(); //remove \t
-            return Lines.Select(x => x.Trim()).ToList(); //remove white spaces at the beginning and end
+            Lines = Lines.Select(x => x.Trim()).ToList(); //remove white spaces at the beginning and end (including \r\n)
+            Lines = RemoveComments(Lines);
+            return Lines;
+        }
+
+        public static string RemoveMultiLineComments(string code)
+        {
+            Regex RxMultiLineComment = new Regex("(\\/\\*(.|\n)*?\\*\\/)");
+            Regex RxNewLine = new Regex("(\\r\\n)");
+            MatchCollection matchList = Regex.Matches(code, RxMultiLineComment.ToString());
+            List<GroupCollection> list = matchList.Cast<Match>().Select(match => match.Groups).ToList();
+            foreach (GroupCollection item in list)
+            {
+                string CurrentMatch = item.SyncRoot.ToString();
+                int NewLinesCount = Regex.Matches(CurrentMatch, RxNewLine.ToString()).Count;
+                int IndexStart = matchList[0].Index;
+                int Length = matchList[0].Length;
+                string Str = string.Concat(Enumerable.Repeat(Environment.NewLine, NewLinesCount));
+                code = code.Remove(IndexStart, Length).Insert(IndexStart, Str);
+                matchList = Regex.Matches(code, RxMultiLineComment.ToString());
+                list = matchList.Cast<Match>().Select(match => match.Groups).ToList();
+            }
+            return code;
+        }
+
+        public static string RemoveSingleLineComments(string code)
+        {
+            Regex RxSingleLineComment = new Regex("(?<!\")\\/\\/(?!.*\")[ ]*(.*)"); // BUG - Quotes in comment: //"OKAY | //OKAY" | //""OKAY
+            Regex RxNewLineCleanUp = new Regex("(?<!\r)\n");
+            code = Regex.Replace(code, RxSingleLineComment.ToString(), "");
+            code = Regex.Replace(code, RxNewLineCleanUp.ToString(), Environment.NewLine);
+            //TextArea.Text = code;
+            return code;
+        }
+
+        public static List<string> RemoveComments(List<string> Lines)
+        {
+            string code = string.Join(Environment.NewLine, Lines);
+            code = RemoveMultiLineComments(code);
+            code = RemoveSingleLineComments(code);
+            Lines = code.Split(new[] { Environment.NewLine }, StringSplitOptions.None).ToList();
+            return Lines;
         }
 
         public static string PrintError(ERROR ERRORVALUE, string CurrentLine, int CurrentLineIndex)
@@ -290,7 +291,7 @@ namespace CLPS2C
             {
                 //0x10 -> 0x00000010
                 address = Util.Trim0x(address);
-                if (!Util.TryParseUIntStringHex(address, out uint TryParseAddr)) //invalid hex address
+                if (!Util.TryParseUIntStringHex(address, out uint _)) //invalid hex address
                 {
                     //address = Util.Add0x(address);
                     return false;
@@ -299,7 +300,7 @@ namespace CLPS2C
             else
             {
                 //10 -> 0x00000010
-                if (!Util.TryParseUIntStringInt(address, out uint TryParseAddr) && !Util.TryParseUIntStringHex(address, out TryParseAddr))
+                if (!Util.TryParseUIntStringInt(address, out uint _) && !Util.TryParseUIntStringHex(address, out _))
                 {
                     return false;
                 }
@@ -361,6 +362,54 @@ namespace CLPS2C
             //patch=1,EE,XXXXXXXX,extended,YYYYYYYY -> XXXXXXXX YYYYYYYY
             Regex PCSX2rx = new Regex(@"^patch=1,EE,[0-9A-F]{8},extended,[0-9A-F]{8}");
             return Lines.Select(str => { Match match = Regex.Match(str, PCSX2rx.ToString()); return match.Success ? $"{str.Substring(11, 8)} {str.Substring(29, 8)}{str.Substring(37, str.Length - 37)}" : str; }).ToArray();
+        }
+
+        public static string GetSnippet(string[] s, string SnippetStart, string SnippetEnd, int StartAt, out int EndedAt)
+        {
+            string temp = "";
+            int i = StartAt;
+            while (i < s.Length && s[i] != SnippetEnd)
+            {
+                temp += s[i] + Environment.NewLine;
+                i++;
+            }
+            EndedAt = i;
+            return temp;
+        }
+
+        public static int GetMenuItemIndexByText(ToolStripMenuItem MenuStrip, string Text)
+        {
+            ToolStripMenuItem item = MenuStrip.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(x => x.Text == Text);
+            if (item != null)
+            {
+                int index = MenuStrip.DropDownItems.IndexOf(item);
+                return index;
+            }
+            return -1;
+        }
+
+        public static int GetItemIdxInMenu(ToolStripMenuItem TargetItem, ToolStripMenuItem MenuStripSnippet)
+        {
+            int idx = 0;
+
+            foreach (ToolStripMenuItem item in MenuStripSnippet.DropDownItems)
+            {
+                if (item.Text == TargetItem.Text)
+                    return idx;
+
+                if (item.HasDropDown)
+                {
+                    foreach (ToolStripMenuItem item2 in item.DropDownItems)
+                    {
+                        if (item2.Text == TargetItem.Text)
+                            return idx;
+                        idx++;
+                    }
+                }
+                else
+                    idx++;
+            }
+            return -1;
         }
 
         public enum ERROR

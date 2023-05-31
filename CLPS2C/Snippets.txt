@@ -1,0 +1,233 @@
+SnippetExCode:Example code
+Set MapID 0x3E1110
+Set ParisID 3
+Set JobID 0x67381C
+Set CharBase 0x2E1E40
+Set TransOff 0x58
+Set XCoordOff 0x30
+Set CharHP 3D4AB0
+Set CharHPMax 40
+Set MyStr "Parkour_Start\0"
+
+If MapID =: ParisID
+	SendRaw " //If in paris"
+	If JobID !. 0xFF
+		SendRaw "\t //If not in a job"
+		WritePointerFloat CharBase,TransOff,XCoordOff 1500 //write 1500 (in float) to the character's x coordinate
+	EndIf
+	Write32 CharHP CharHPMax //Set the character's hp to 40
+	WriteString 0x87310 MyStr
+EndIf
+SnippetExCodeEnd
+SnippetAsm:Assembly scope
+ASM_START 0
+	
+ASM_END
+SnippetAsmEnd
+SnippetExAsm:Assembly example code
+Set Cave 203D1000
+ASM_START Cave
+	//Store XYZ coords to cave
+	lw $t1,0x002DE2F0 //act char ptr
+	addi $t2,$t1,0x0058 //trans off
+	lw $t2,($t2)
+	lw $t3,0x30($t2) //get x coord
+	lui $at,0x003D
+	sw $t3,0xE10($at) //store x coord at cave
+	lw $t4,0x34($t2) //get y coord
+	lui $at,0x003D
+	sw $t4,0xE14($at) //store y coord at cave
+	lw $t5,0x38($t2) //get z coord
+	lui $at,0x003D
+	sw $t5,0xE18($at) //store z coord at cave
+	//Check flag
+	lw $t0,0x003D0D00
+	li $at,0x1
+	beq $t0,$at,SetCustomCoords
+	nop
+	b Exit
+	nop
+SetCustomCoords: lw $t3,0x003D0E00 //load custom x coord
+	sw $t3,0x30($t2) //store x coord
+	lw $t4,0x003D0E04 //load custom y coord
+	sw $t4,0x34($t2) //store y coord
+	lw $t5,0x003D0E08 //load custom z coord
+	sw $t5,0x38($t2) //store z coord
+	li $t6,0 
+	lui $at,0x003D
+	sw $t6,0xD00($at) //set flag to 0
+Exit: jr $ra //return
+	nop
+ASM_END
+SnippetExAsmEnd
+SnippetAsmRegisters:Assembly:Registers
+/*
+General-Purpose Registers (GPRs)
+Number		Name		Description
+$0			$zero		Always zero.
+$1			$at			Reserved for assembler.
+$2,$3		$v0,$v1		First and second return values by functions.
+$4-$7		$a0-$a3		First four arguments to functions.
+$8-$15		$t0-$t7		Temporary registers. $t0-$t3 may also be used as additional argument registers.
+$16-$23		$s0-$s7		Saved registers. Functions must save and restore these before using them.
+$24,$25		$t8,$t9		More temporary registers.
+$26,$27		$k0,$k1		Reserved for kernel (operating system).
+$28			$gp			Global pointer.
+$29			$sp			Stack pointer.
+$30			$fp			Frame pointer.
+$31			$ra			Return address. Used by JAL and JALR to store the address to return to after a function.
+-			$pc			Program Counter. Indicates the address of the currently-executing instruction.
+-			$hi			High-order bits. Stores the remainder of a division and the first 32 bits of the result of a multiplication. Can be accessed with mfhi.
+-			$lo			Low-order bits. Stores the quotient of a division and the second 32 bits of the result of a multiplication. Can be accessed with mflo.
+Floating-point Registers (FPRs)
+Number		Name		Description
+-			$f0-$f3		Return values.
+-			$f4-$f11	Temporary registers.
+-			$f12-$f19	Argument registers.
+-			$f20-$f31	Saved registers.
+*/
+SnippetAsmRegistersEnd
+SnippetAsmArit:Assembly:Arithmetic instructions
+/*
+add: Adds the contents of register $rs to the contents of register $rt and stores the result in register $rd.
+	Syntax: add $rd, $rs, $rt
+addi: Adds the contents of register $rs to the specified immediate value and stores the result in register $rd.
+	Syntax: addi $rd, $rs, immediate
+addu: Adds the unsigned contents of register $rs to the unsigned contents of register $rt and stores the result in register $rd.
+	Syntax: addu $rd, $rs, $rt
+addiu: Adds the unsigned contents of register $rs to the specified unsigned immediate value and stores the result in register $rd.
+	Syntax: addiu $rd, $rs, immediate
+sub: Subtracts the contents of register $rt from register $rs and stores the result in register $rd.
+	Syntax: sub $rd, $rs, $rt
+subu: Subtracts the unsigned contents of register $rt from the unsigned contents of register $rs and stores the result in register $rd.
+	Syntax: subu $rd, $rs, $rt
+mult: Multiplies the contents of register $rs with the contents of register $rt and stores the result in the registers $hi and $lo.
+	Syntax: mult $rs, $rt
+multu: Multiplies the unsigned contents of register $rs with the unsigned contents of register $rt and stores the result in the registers $hi and $lo.
+	Syntax: multu $rs, $rt
+div: Divides the contents of register $rs by the contents of register $rt and stores the quotient in the $lo register and the remainder in the $hi register.
+	Syntax: div $rs, $rt
+divu: Divides the unsigned contents of register $rs by the unsigned contents of register $rt and stores the quotient in the $lo register and the remainder in the $hi register.
+	Syntax: divu $rs, $rt
+mfhi: Copy the contents of register $hi to register $rd.
+	Syntax: mfhi $rd
+mflo: Copy the contents of register $lo to register $rd.
+	Syntax: mflo $rd
+mthi: Copy the contents of register $rs to register $hi.
+	Syntax: mthi $rs
+mtlo: Copy the contents of register $rs to register $lo.
+	Syntax: mtlo $rs
+*/
+SnippetAsmAritEnd
+SnippetAsmLogic:Assembly:Logical instructions
+/*
+and: Performs a bitwise AND operation between the contents of registers $rs and $rt and stores the result in register $rd.
+	Syntax: and $rd, $rs, $rt
+or: Performs a bitwise OR operation between the contents of registers $rs and $rt and stores the result in register $rd.
+	Syntax: or $rd, $rs, $rt
+xor: Performs a bitwise XOR operation between the contents of registers $rs and $rt and stores the result in register $rd.
+	Syntax: xor $rd, $rs, $rt
+nor: Performs a bitwise NOR operation between the contents of registers $rs and $rt and stores the result in register $rd.
+	Syntax: nor $rd, $rs, $rt
+sll: Performs a logical left shift operation on register $rt, with the number of bits to shift specified by the immediate value, and stores the result in register $rd.
+	Syntax: sll $rd, $rt, immediate
+srl: Performs a logical right shift operation on register $rt, with the number of bits to shift specified by the immediate value, and stores the result in register $rd.
+	Syntax: srl $rd, $rt, immediate
+slt: Set less than. Compares the signed values in registers $rs and $rt. If the value in $rs is less than the value in $rt, the destination register $rd is set to 1. Otherwise, it is set to 0.
+	Syntax: slt $rd, $rs, $rt
+stli: Set less than immediate. Compares the signed values in register $rs and the immediate value. If the value in $rs is less than the immediate value, the destination register $rd is set to 1. Otherwise, it is set to 0.
+	Syntax: slt $rd, $rs, immediate
+sltu: Set less than unsigned. Compares the unsigned values in registers $rs and $rt. If the value in $rs is less than the value in $rt, the destination register $rd is set to 1. Otherwise, it is set to 0.
+	Syntax: sltu $rd, $rs, $rt
+sltiu: Set less than immediate unsigned. Compares the unsigned values in register $rs and the immediate value. If the value in $rs is less than the immediate value, the destination register $rd is set to 1. Otherwise, it is set to 0.
+	Syntax: sltiu $rd, $rs, immediate
+*/
+SnippetAsmLogicEnd
+SnippetAsmLoadStore:Assembly:Load and store instructions
+/*
+lb: Loads a signed byte from memory in the $rt register.
+	Syntax: lb $rt, offset($rs)
+lbu: Loads an unsigned byte from memory in the $rt register.
+	Syntax: lbu $rt, offset($rs)
+lh: Loads a signed halfword from memory in the $rt register.
+	Syntax: lh $rt, offset($rs)
+lhu: Loads an unsigned halfword from memory in the $rt register.
+	Syntax: lhu $rt, offset($rs)
+lw: Loads a word from memory in the $rt register.
+	Syntax: lw $rt, offset($rs)
+sb: Stores a byte from the $rt register into memory.
+	Syntax: sb $rt, offset($rs)
+sh: Stores a halfword from the $rt register into memory.
+	Syntax: sh $rt, offset($rs)
+sw: Stores a word from the $rt register into memory.
+	Syntax: sw $rt, offset($rs)
+*/
+SnippetAsmLoadStoreEnd
+SnippetAsmBranchJump:Assembly:Branch and jump instructions
+/*
+beq: Branches if two values are equal ($rs == $rt).
+	Syntax: beq $rs, $rt, offset
+bne: Branches if two values are not equal ($rs != $rt).
+	Syntax: bne $rs, $rt, offset
+bltz: Branches if a value is less than zero ($rs < 0).
+	Syntax: bltz $rs, offset
+bgtz: Branches if a value is greater than zero ($rs > 0).
+	Syntax: bgtz $rs, offset
+blez: Branches if a value is less than or equal to zero ($rs <= 0).
+	Syntax: blez $rs, offset
+bgez: Branches if a value is greater than or equal to zero ($rs >= 0).
+	Syntax: bgez $rs, offset
+j: Jumps to a target address.
+	Syntax: j immediate
+jal: Jump and Link. Jumps to a target address and stores the return address in the register $ra.
+	Syntax: jal immediate
+jr: Jump Register. Jumps to the address stored in the register $rs.
+	Syntax: jr $rs
+jalr: Jump and Link Register. Jumps to to the address stored in register $rs and stores the return address in the register $ra.
+	Syntax: jalr $rs
+*/
+SnippetAsmBranchJumpEnd
+SnippetAsmFloat:Assembly:Floating point instructions
+/*
+lwc1: Loads a floating point value from memory in the $ft register.
+	Syntax: lwc1 $ft, offset($rs)
+swc1: Stores a floating point value from the $rt register into memory.
+	Syntax: swc1 $ft, offset($rs)
+add.s: Adds two floating point values.
+	Syntax: add.s $fd, $fs, $ft
+sub.s: Subtracts one floating point value from another.
+	Syntax: sub.s $fd, $fs, $ft
+mul.s: Multiplies two floating point values.
+	Syntax: mul.s $fd, $fs, $ft
+div.s: Divides one floating point value by another.
+	Syntax: div.s $fd, $fs, $ft
+sqrt.s: Calculates the square root of a floating point value.
+	Syntax: sqrt.s $fd, $fs
+abs.s: Calculates the absolute value of a floating point value.
+	Syntax: abs.s $fd, $fs
+neg.s: Calculates the negation of a floating point value.
+	Syntax: neg.s $fd, $fs
+mtc1: Moves a word to a floating point register.
+	Syntax: mtc1 $rs, $fd
+mfc1: Moves a floating point value to a general purpose register.
+	Syntax: mfc1 $rd, $fs
+cvt.s.w: Converts a word to a floating point value.
+	Syntax: cvt.s.w $fd, $fs
+cvt.w.s: Converts a floating point value to a word
+	Syntax: cvt.w.s $fd, $fs
+c.eq.s: Compares two floating point values for equality ($fs == $ft).
+	Syntax: c.eq.s $fs, $ft
+c.lt.s: Compares two floating point values for less than ($fs < $ft).
+	Syntax: c.lt.s $fs, $ft
+c.gt.s: Compares two floating point values for greater than ($fs > $ft).
+	Syntax: c.gt.s $fs, $ft
+c.le.s: Compares two floating point values for less than or equal ($fs <= $ft).
+	Syntax: c.le.s $fs, $ft
+c.ge.s: Compares two floating point values for greater than or equal ($fs >= $ft).
+	Syntax: c.ge.s $fs, $ft
+bc1t: Branch on FP condition true. To be used after a floating point comparison.
+	Syntax: bc1t offset
+bc1f: Branch on FP condition false. To be used after a floating point comparison.
+	Syntax: bc1f offset
+*/
+SnippetAsmFloatEnd
