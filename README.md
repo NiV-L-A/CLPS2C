@@ -1,3 +1,5 @@
+# This repository is deprecated.<br>Please, use [CLPS2C-Compiler](https://github.com/NiV-L-A/CLPS2C-Compiler) and the Visual Studio Code extension [vscode-clps2c](https://github.com/NiV-L-A/vscode-clps2c) instead.
+--------
 # CLPS2C (Custom Language for PlayStation 2 Cheats) #
 <p align="center">
   <img width="256" height="256" src="https://github.com/NiV-L-A/CLPS2C/blob/main/CLPS2C/256x256.ico">
